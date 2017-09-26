@@ -28,8 +28,3 @@ func (w *Webcam) getImage() ([]byte, error) {
 
 	return body, nil
 }
-
-// AllWebcams contains all the webcams
-var AllWebcams []Webcam = []Webcam{
-	Webcam{"paccots", "http://manage.mycity.travel/proxy/webcam/51.jpg"},
-	Webcam{"arpette", "http://panorama.simwatch.ch/image.php?cname=Arpette"}}

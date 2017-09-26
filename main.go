@@ -1,12 +1,26 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 )
 
+var allWebcams = []Webcam{}
+
+func loadWebcams() {
+	file, err := os.Open("webcams.json")
+	if err != nil {
+		panic("Could not read configuration file")
+	}
+
+	decoder := json.NewDecoder(file)
+	decoder.Decode(&allWebcams)
+}
+
 func getWebcam(name string) *Webcam {
-	for _, w := range AllWebcams {
+	for _, w := range allWebcams {
 		if w.Name == name {
 			return &w
 		}
@@ -35,6 +49,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	loadWebcams()
 	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
 }
