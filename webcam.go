@@ -10,7 +10,7 @@ import (
 type Webcam struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
-	URL  string `json:"-"`
+	URL  string `json:"URL"`
 }
 
 func (w *Webcam) getImage() ([]byte, error) {
