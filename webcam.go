@@ -8,9 +8,10 @@ import (
 // Webcam struct contains information concerning a webcam such
 // as its name and the URL at which the webcam image can be retrieved.
 type Webcam struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	URL  string `json:"URL"`
+	ID       int        `json:"id"`
+	Name     string     `json:"name"`
+	URL      string     `json:"URL"`
+	Position Coordinate `json:"position"`
 }
 
 func (w *Webcam) getImage() ([]byte, error) {

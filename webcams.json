@@ -2,11 +2,64 @@
   {
     "id": 1,
     "name": "Les Paccots",
-    "URL": "http://manage.mycity.travel/proxy/webcam/51.jpg"
+    "URL": "http://manage.mycity.travel/proxy/webcam/51.jpg",
+    "position": {
+      "lat": 46.51337,
+      "lon": 6.94825
+    }
   },
   {
     "id": 2,
     "name": "Relais d'Arpette",
-    "URL": "http://panorama.simwatch.ch/image.php?cname=Arpette"
+    "URL": "http://panorama.simwatch.ch/image.php?cname=Arpette",
+    "position": {
+      "lat": 46.03001,
+      "lon": 7.09288
+    }
+  },
+  {
+    "id": 3,
+    "name": "La Fouly",
+    "URL": "http://www.lafouly.ch/uploads/webcam/webcam_lafouly.jpg",
+    "position": {
+      "lat": 45.93422,
+      "lon": 7.10507
+    }
+  },
+  {
+    "id": 4,
+    "name": "Jaun",
+    "URL": "http://www.mooser-jaggi.ch/live/BergbahnenJaun000M.jpg",
+    "position": {
+      "lat": 46.61090,
+      "lon": 7.29337
+    }
+  },
+  {
+    "id": 5,
+    "name": "Chalet du Soldat",
+    "URL": "http://lienert-cam.syndicat.com/Webcams/Webcam01/current/image.jpg",
+    "position": {
+      "lat": 46.57649,
+      "lon": 7.26354
+    }
+  },
+  {
+    "id": 6,
+    "name": "Dents du Midi",
+    "URL": "http://www.blorange.com/telemorgins/webcam2.jpg",
+    "position": {
+      "lat": 46.22493,
+      "lon": 6.86095
+    }
+  },
+  {
+    "id": 7,
+    "name": "Pic Chaussy",
+    "URL": "http://manage.mycity.travel/proxy/webcam/147.jpg",
+    "position": {
+      "lat": 	46.40462,
+      "lon": 7.09795
+    }
   }
 ]
