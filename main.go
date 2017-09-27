@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 var allWebcams = []Webcam{}
@@ -15,36 +16,54 @@ func loadWebcams() {
 		panic("Could not read configuration file")
 	}
 
+	defer file.Close()
+
 	decoder := json.NewDecoder(file)
 	decoder.Decode(&allWebcams)
 }
 
-func getWebcam(name string) *Webcam {
+func getWebcam(id int) *Webcam {
 	for _, w := range allWebcams {
-		if w.Name == name {
+		if w.ID == id {
 			return &w
 		}
 	}
 	return nil
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	webcamName := r.URL.RequestURI()[1:]
-	webcam := getWebcam(webcamName)
+func sendWebcamList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
+	encoder := json.NewEncoder(w)
+	encoder.Encode(allWebcams)
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.RequestURI() == "/" {
+		sendWebcamList(w, r)
+		return
+	}
+
+	webcamID, err := strconv.Atoi(r.URL.RequestURI()[1:])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	webcam := getWebcam(webcamID)
 	if webcam == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	imageBytes, err := getWebcam(webcamName).getImage()
+	imageBytes, err := getWebcam(webcamID).getImage()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Could not get image")
 		return
 	}
 
-	w.Header().Add("Content-Type", "img/jpeg")
+	w.Header().Add("Content-Type", "image/jpeg")
 	w.Write(imageBytes)
 }
 
