@@ -1,4 +1,4 @@
-package router
+package main
 
 import (
 	"net/http"
@@ -37,7 +37,7 @@ func (c *testController) GetRoutes() []Route {
 func TestRouterRootPath(t *testing.T) {
 	called := false
 
-	router := New(handlerMustNotBeCalled(t))
+	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustBeCalled(&called)},
@@ -59,7 +59,7 @@ func TestRouterRootPath(t *testing.T) {
 func TestRouterMountPath(t *testing.T) {
 	called := false
 
-	router := New(handlerMustNotBeCalled(t))
+	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/there", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustBeCalled(&called)},
@@ -81,7 +81,7 @@ func TestRouterMountPath(t *testing.T) {
 func TestRouterMountPathAndControllerPath(t *testing.T) {
 	called := false
 
-	router := New(handlerMustNotBeCalled(t))
+	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/there", &testController{
 		[]Route{
 			Route{"GET", "/here", handlerMustBeCalled(&called)},
@@ -104,7 +104,7 @@ func TestRouterMountPathAndControllerPath(t *testing.T) {
 func TestRouterPathParams(t *testing.T) {
 	called := false
 
-	router := New(handlerMustNotBeCalled(t))
+	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/:name", handlerMustBeCalledWithParam(&called, "name", "toto")},
@@ -127,7 +127,7 @@ func TestRouterPathParams(t *testing.T) {
 func TestRouterAmbiguousPathParams(t *testing.T) {
 	called := false
 
-	router := New(handlerMustNotBeCalled(t))
+	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/:name", handlerMustNotBeCalled(t)},
@@ -150,7 +150,7 @@ func TestRouterAmbiguousPathParams(t *testing.T) {
 func TestRouterDefaultHandler(t *testing.T) {
 	called := false
 
-	router := New(handlerMustBeCalled(&called))
+	router := NewRouter(handlerMustBeCalled(&called))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustNotBeCalled(t)},
@@ -172,7 +172,7 @@ func TestRouterDefaultHandler(t *testing.T) {
 func TestRouterNotFoundMethod(t *testing.T) {
 	called := false
 
-	router := New(handlerMustBeCalled(&called))
+	router := NewRouter(handlerMustBeCalled(&called))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustNotBeCalled(t)},

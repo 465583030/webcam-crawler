@@ -21,10 +21,17 @@ func loadWebcams() []Webcam {
 	return webcams
 }
 
+func defaultHandler(w http.ResponseWriter, r *http.Request, p PathParams) {
+	w.WriteHeader(http.StatusNotFound)
+}
+
 func main() {
-	controller := WebcamController{}
+	controller := &WebcamController{}
 	controller.SetWebcams(loadWebcams())
 
-	http.Handle("/", controller)
+	router := NewRouter(defaultHandler)
+	router.Mount("/", controller)
+
+	http.Handle("/", router)
 	http.ListenAndServe(":8080", nil)
 }

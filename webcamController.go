@@ -16,29 +16,28 @@ func (c *WebcamController) SetWebcams(webcams []Webcam) {
 	c.webcams = webcams
 }
 
-func (c WebcamController) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.RequestURI() == "/" {
-		c.sendWebcamList(w, r)
-		return
+// GetRoutes returns the routes handled by this controller.
+func (c *WebcamController) GetRoutes() []Route {
+	return []Route{
+		Route{"GET", "/", c.sendWebcamList},
+		Route{"GET", "/:id", c.sendWebcam},
 	}
-
-	webcamID, err := strconv.Atoi(r.URL.RequestURI()[1:])
-	if err != nil {
-		notFound(w)
-		return
-	}
-
-	c.sendWebcam(webcamID, w, r)
 }
 
-func (c *WebcamController) sendWebcamList(w http.ResponseWriter, r *http.Request) {
+func (c *WebcamController) sendWebcamList(w http.ResponseWriter, r *http.Request, p PathParams) {
 	w.Header().Set("Content-Type", "application/json")
 
 	encoder := json.NewEncoder(w)
 	encoder.Encode(c.webcams)
 }
 
-func (c *WebcamController) sendWebcam(webcamID int, w http.ResponseWriter, r *http.Request) {
+func (c *WebcamController) sendWebcam(w http.ResponseWriter, r *http.Request, p PathParams) {
+	webcamID, err := strconv.Atoi(p["id"])
+	if err != nil {
+		notFound(w)
+		return
+	}
+
 	webcam := c.getWebcam(webcamID)
 	if webcam == nil {
 		notFound(w)

@@ -5,6 +5,12 @@ import (
 	"net/http"
 )
 
+// Coordinate represents a geographic coordinate with latitude and longitude.
+type Coordinate struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
 // Webcam struct contains information concerning a webcam such
 // as its name and the URL at which the webcam image can be retrieved.
 type Webcam struct {
