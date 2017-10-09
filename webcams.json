@@ -6,7 +6,9 @@
     "position": {
       "lat": 46.51337,
       "lon": 6.94825
-    }
+    },
+    "crawlInterval": 5,
+    "maxAge": 15
   },
   {
     "id": 2,
@@ -15,7 +17,9 @@
     "position": {
       "lat": 46.03001,
       "lon": 7.09288
-    }
+    },
+    "crawlInterval": 30,
+    "maxAge": 120
   },
   {
     "id": 3,
@@ -24,7 +28,9 @@
     "position": {
       "lat": 45.93422,
       "lon": 7.10507
-    }
+    },
+    "crawlInterval": 30,
+    "maxAge": 120
   },
   {
     "id": 4,
@@ -33,7 +39,9 @@
     "position": {
       "lat": 46.61090,
       "lon": 7.29337
-    }
+    },
+    "crawlInterval": 30,
+    "maxAge": 120
   },
   {
     "id": 5,
