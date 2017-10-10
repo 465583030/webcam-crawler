@@ -8,6 +8,7 @@ import (
 
 // WebcamController struct contains the webcam data and provides methods to handle HTTP requests.
 type WebcamController struct {
+	client  http.Client
 	webcams []Webcam
 }
 
@@ -44,7 +45,7 @@ func (c *WebcamController) sendWebcam(w http.ResponseWriter, r *http.Request, p 
 		return
 	}
 
-	imageBytes, err := webcam.getImage()
+	imageBytes, err := webcam.getImage(&c.client)
 	if err != nil {
 		proxyFailure(w)
 		return

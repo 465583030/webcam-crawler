@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -15,16 +14,20 @@ import (
 // in Webcam structs and saves them in a local folder.
 type Crawler struct {
 	webcams     []Webcam
+	client      *http.Client
 	storagePath string
 	stopChans   []chan struct{}
+	format      string
 }
 
 // NewCralwer creates a new crawler given a list of Webcams and a path to a folder to save images.
 func NewCralwer(webcams []Webcam, storagePath string) *Crawler {
 	return &Crawler{
 		webcams,
+		&http.Client{},
 		storagePath,
 		make([]chan struct{}, 0),
+		time.RFC3339,
 	}
 }
 
@@ -67,17 +70,17 @@ func (c *Crawler) scheduleCrawl(w Webcam) {
 }
 
 func (c *Crawler) crawl(w Webcam) {
-	image, err := w.getImage()
+	now := time.Now()
+
+	image, err := w.getImage(c.client)
 	if err != nil {
 		fmt.Printf("Could not get image for webcam %s: %s\n", w.Name, err) // TODO: replace with proper logging
 		return
 	}
 
 	dirname := filepath.Join(c.storagePath, strconv.Itoa(w.ID))
-	os.MkdirAll(dirname, os.ModeDir|os.ModePerm)
-
-	now := time.Now()
-	filename := filepath.Join(dirname, now.Format(time.RFC3339)+".jpg")
+	os.MkdirAll(dirname, os.ModePerm)
+	filename := filepath.Join(dirname, now.Format(c.format)+".jpg")
 
 	err = ioutil.WriteFile(filename, image, 0644)
 	if err != nil {
@@ -85,22 +88,24 @@ func (c *Crawler) crawl(w Webcam) {
 		return
 	}
 
-	cleanupDir(dirname, w.MaxAge())
+	c.cleanupDir(dirname, w.MaxAge())
 }
 
-func cleanupDir(dirname string, maxAge time.Duration) {
+func (c *Crawler) cleanupDir(dirname string, maxAge time.Duration) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		fmt.Printf("Could not read directory %s: %s\n", dirname, err)
 	}
 
 	for _, f := range files {
-		creationTime, err := timeFromName(f.Name())
+		creationTime, err := c.timeFromName(f.Name())
 		if err != nil {
 			continue
 		}
 
-		if time.Now().Sub(creationTime) > maxAge {
+		now := time.Now()
+
+		if now.Sub(creationTime) > maxAge {
 			filename := filepath.Join(dirname, f.Name())
 			err := os.Remove(filename)
 			if err != nil {
@@ -110,13 +115,11 @@ func cleanupDir(dirname string, maxAge time.Duration) {
 	}
 }
 
-func timeFromName(name string) (time.Time, error) {
-	nameParts := strings.Split(name, ".")
-	if len(nameParts) != 2 {
-		return time.Time{}, errors.New("Cannot extract time from name: " + name)
-	}
+func (c *Crawler) timeFromName(name string) (time.Time, error) {
+	var extension = filepath.Ext(name)
+	var dateString = name[0 : len(name)-len(extension)]
 
-	creation, err := time.Parse(time.RFC3339, nameParts[0])
+	creation, err := time.Parse(c.format, dateString)
 	if err != nil {
 		return time.Time{}, err
 	}

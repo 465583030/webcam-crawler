@@ -16,26 +16,26 @@ type Coordinate struct {
 // Webcam struct contains information concerning a webcam such
 // as its name and the URL at which the webcam image can be retrieved.
 type Webcam struct {
-	ID            int        `json:"id"`
-	Name          string     `json:"name"`
-	URL           string     `json:"URL"`
-	Position      Coordinate `json:"position"`
-	crawlInterval string
-	maxAge        string
+	ID                  int        `json:"id"`
+	Name                string     `json:"name"`
+	URL                 string     `json:"URL"`
+	Position            Coordinate `json:"position"`
+	CrawlIntervalString string     `json:"crawlInterval"`
+	MaxAgeString        string     `json:"maxAge"`
 }
 
 // CrawlInterval returns the Duration between two image fetches.
 func (w *Webcam) CrawlInterval() time.Duration {
-	return myParseDuration(w.crawlInterval)
+	return myParseDuration(w.CrawlIntervalString)
 }
 
 // MaxAge returns the maximum Duration an image should be stored.
 func (w *Webcam) MaxAge() time.Duration {
-	return myParseDuration(w.maxAge)
+	return myParseDuration(w.MaxAgeString)
 }
 
-func (w *Webcam) getImage() ([]byte, error) {
-	r, err := http.Get(w.URL)
+func (w *Webcam) getImage(client *http.Client) ([]byte, error) {
+	r, err := client.Get(w.URL)
 
 	if err != nil {
 		return nil, err
