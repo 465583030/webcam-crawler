@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 )
@@ -27,7 +28,9 @@ func startCrawler(webcams []Webcam) {
 }
 
 func startWebServer(webcams []Webcam) {
-	controller := &WebcamController{}
+	controller := &WebcamController{
+		storagePath: "hist",
+	}
 	controller.SetWebcams(webcams)
 
 	router := NewRouter(defaultHandler)
@@ -38,6 +41,7 @@ func startWebServer(webcams []Webcam) {
 }
 
 func defaultHandler(w http.ResponseWriter, r *http.Request, p PathParams) {
+	fmt.Printf("Page not found for URL %s\n", r.URL.RequestURI())
 	w.WriteHeader(http.StatusNotFound)
 }
 
