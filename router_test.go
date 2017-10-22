@@ -1,28 +1,31 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"net/http"
-	"net/url"
+	"net/http/httptest"
 	"testing"
 )
 
-func handlerMustBeCalled(called *bool) Handler {
-	return func(http.ResponseWriter, *http.Request, PathParams) {
-		*called = true
-	}
+func helloHandler(w http.ResponseWriter, r *http.Request, p PathParams) error {
+	fmt.Fprintf(w, "Hello from %s", r.URL.Path)
+	return nil
 }
 
-func handlerMustBeCalledWithParam(called *bool, paramName string, paramValue string) Handler {
-	return func(w http.ResponseWriter, r *http.Request, p PathParams) {
-		if p[paramName] == paramValue {
-			*called = true
-		}
-	}
+func httpErrorHandler(w http.ResponseWriter, r *http.Request, p PathParams) error {
+	return StatusError{404, errors.New("test HTTPError")}
+}
+
+func errorHandler(w http.ResponseWriter, r *http.Request, p PathParams) error {
+	return errors.New("test error")
 }
 
 func handlerMustNotBeCalled(t *testing.T) Handler {
-	return func(http.ResponseWriter, *http.Request, PathParams) {
+	return func(http.ResponseWriter, *http.Request, PathParams) error {
 		t.Fail()
+		return nil
 	}
 }
 
@@ -34,160 +37,173 @@ func (c *testController) GetRoutes() []Route {
 	return c.routes
 }
 
-func TestRouterRootPath(t *testing.T) {
-	called := false
+func getResponseBody(r *http.Response) string {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	return buf.String()
+}
 
+func TestRouterRootPath(t *testing.T) {
 	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
-			Route{"GET", "/", handlerMustBeCalled(&called)},
+			Route{"GET", "/", helloHandler},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/",
-		},
-	})
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterMountPath(t *testing.T) {
-	called := false
-
 	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/there", &testController{
 		[]Route{
-			Route{"GET", "/", handlerMustBeCalled(&called)},
+			Route{"GET", "/", helloHandler},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/there",
-		},
-	})
+	req := httptest.NewRequest("GET", "/there", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /there" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterMountPathAndControllerPath(t *testing.T) {
-	called := false
-
 	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/there", &testController{
 		[]Route{
-			Route{"GET", "/here", handlerMustBeCalled(&called)},
+			Route{"GET", "/here", helloHandler},
 			Route{"GET", "/", handlerMustNotBeCalled(t)},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/there/here",
-		},
-	})
+	req := httptest.NewRequest("GET", "/there/here", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /there/here" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterPathParams(t *testing.T) {
-	called := false
-
 	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
-			Route{"GET", "/:name", handlerMustBeCalledWithParam(&called, "name", "toto")},
+			Route{"GET", "/:name", helloHandler},
 			Route{"GET", "/", handlerMustNotBeCalled(t)},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/toto",
-		},
-	})
+	req := httptest.NewRequest("GET", "/toto", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /toto" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterAmbiguousPathParams(t *testing.T) {
-	called := false
-
 	router := NewRouter(handlerMustNotBeCalled(t))
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/:name", handlerMustNotBeCalled(t)},
-			Route{"GET", "/toto/:special", handlerMustBeCalledWithParam(&called, "special", "titi")},
+			Route{"GET", "/toto/:special", helloHandler},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/toto/titi",
-		},
-	})
+	req := httptest.NewRequest("GET", "/toto/titi", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /toto/titi" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterDefaultHandler(t *testing.T) {
-	called := false
-
-	router := NewRouter(handlerMustBeCalled(&called))
+	router := NewRouter(helloHandler)
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustNotBeCalled(t)},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/notfound",
-		},
-	})
+	req := httptest.NewRequest("GET", "/notfound", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /notfound" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
 func TestRouterNotFoundMethod(t *testing.T) {
-	called := false
-
-	router := NewRouter(handlerMustBeCalled(&called))
+	router := NewRouter(helloHandler)
 	router.Mount("/", &testController{
 		[]Route{
 			Route{"GET", "/", handlerMustNotBeCalled(t)},
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "POST",
-		URL: &url.URL{
-			Path: "/",
-		},
-	})
+	req := httptest.NewRequest("POST", "/", nil)
+	rec := httptest.NewRecorder()
 
-	if !called {
-		t.Fail()
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+
+	if getResponseBody(res) != "Hello from /" {
+		t.Errorf("Unexpected request body: %s\n", getResponseBody(res))
 	}
 }
 
@@ -199,10 +215,51 @@ func TestRouterNotInitializedDoesNotPanic(t *testing.T) {
 		},
 	})
 
-	router.ServeHTTP(nil, &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Path: "/",
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.Status != "200 OK" {
+		t.Errorf("Expected 200 status code, got %s\n", res.Status)
+	}
+}
+
+func TestRouterHandlerHTTPError(t *testing.T) {
+	router := NewRouter(handlerMustNotBeCalled(t))
+	router.Mount("/", &testController{
+		[]Route{
+			Route{"GET", "/", httpErrorHandler},
 		},
 	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.StatusCode != 404 {
+		t.Errorf("Expected 404 status code, got %d\n", res.StatusCode)
+	}
+}
+
+func TestRouterHandlerError(t *testing.T) {
+	router := NewRouter(handlerMustNotBeCalled(t))
+	router.Mount("/", &testController{
+		[]Route{
+			Route{"GET", "/", errorHandler},
+		},
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	res := rec.Result()
+
+	if res.StatusCode != 500 {
+		t.Errorf("Expected 500 status code, got %d\n", res.StatusCode)
+	}
 }

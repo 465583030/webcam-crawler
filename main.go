@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 )
@@ -40,9 +40,8 @@ func startWebServer(webcams []Webcam) {
 	http.ListenAndServe(":8080", nil)
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request, p PathParams) {
-	fmt.Printf("Page not found for URL %s\n", r.URL.RequestURI())
-	w.WriteHeader(http.StatusNotFound)
+func defaultHandler(w http.ResponseWriter, r *http.Request, p PathParams) error {
+	return StatusError{404, errors.New("Page not found at " + r.URL.Path)}
 }
 
 func main() {

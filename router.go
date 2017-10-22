@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -9,7 +11,7 @@ import (
 type PathParams map[string]string
 
 // A Handler is a function handling requests.
-type Handler func(http.ResponseWriter, *http.Request, PathParams)
+type Handler func(http.ResponseWriter, *http.Request, PathParams) error
 
 // A Route matches a method and a path to a Handler.
 type Route struct {
@@ -27,6 +29,27 @@ type Router struct {
 // A Controller defines a slice of routes.
 type Controller interface {
 	GetRoutes() []Route
+}
+
+// An HTTPError exposes an error and an HTTP status code.
+type HTTPError interface {
+	error
+	Status() int
+}
+
+// StatusError implements HTTPError interface.
+type StatusError struct {
+	Code int
+	Err  error
+}
+
+func (se StatusError) Error() string {
+	return se.Err.Error()
+}
+
+// Status returns the HTTP status code associated with the error.
+func (se StatusError) Status() int {
+	return se.Code
 }
 
 // NewRouter creates a new Router.
@@ -48,16 +71,22 @@ func (r *Router) Mount(path string, controller Controller) {
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.createRootIfNeeded()
-
-	if node, params := r.root.findNode(req.URL.Path); node != nil {
-		if handler := node.handlers[req.Method]; handler != nil {
-			handler(w, req, params)
-		} else {
-			r.callDefaultHandler(w, req)
-		}
+	handler, params, err := r.getHandler(req)
+	if err != nil {
+		err = r.callDefaultHandler(w, req)
 	} else {
-		r.callDefaultHandler(w, req)
+		err = handler(w, req, params)
+	}
+
+	if err != nil {
+		switch e := err.(type) {
+		case HTTPError:
+			log.Printf("HTTP %d : %s\n", e.Status(), e)
+			http.Error(w, http.StatusText(e.Status()), e.Status())
+		default:
+			log.Printf("ERROR: %s\n", e)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -67,10 +96,27 @@ func (r *Router) createRootIfNeeded() {
 	}
 }
 
-func (r *Router) callDefaultHandler(w http.ResponseWriter, req *http.Request) {
-	if r.defaultHandler != nil {
-		r.defaultHandler(w, req, make(PathParams))
+func (r *Router) getHandler(req *http.Request) (Handler, PathParams, error) {
+	r.createRootIfNeeded()
+
+	if node, params := r.root.findNode(req.URL.Path); node != nil {
+		if handler, ok := node.handlers[req.Method]; ok {
+			return handler, params, nil
+		}
+
+		return nil, nil, errors.New("No handler for method " + req.Method + " for path " + req.URL.Path)
 	}
+
+	return nil, nil, errors.New("No handler for path " + req.URL.Path)
+}
+
+func (r *Router) callDefaultHandler(w http.ResponseWriter, req *http.Request) error {
+	if r.defaultHandler != nil {
+		return r.defaultHandler(w, req, make(PathParams))
+	}
+
+	// If no default handler handler is set, return a successful empty response.
+	return nil
 }
 
 type node struct {
